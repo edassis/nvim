@@ -266,7 +266,7 @@ require('lazy').setup({
   --    Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
   --
   --    For additional information see: https://github.com/folke/lazy.nvim#-structuring-your-plugins
-  -- { import = 'custom.plugins' },
+  { import = 'custom.plugins' },
 }, {})
 
 -- [[ Setting options ]]
@@ -315,6 +315,7 @@ vim.o.termguicolors = true
 -- [[ Basic Keymaps ]]
 
 vim.keymap.set('n', '<C-a>', "ggVG", { desc = 'Select all' })
+vim.keymap.set('n', '<C-s>', "<cmd>w<cr>", { desc = '[S]ave' })
 
 -- Keymaps for better default experience
 -- See `:help vim.keymap.set()`
