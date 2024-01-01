@@ -4,6 +4,9 @@ vim.keymap.set('n', '|', "<cmd>Neotree toggle<cr>")
 -- vim.keymap.set('n', '<leader>b', "<cmd>Neotree toggle show buffers right<cr>")
 -- vim.keymap.set('n', '<leader>s', "<cmd>Neotree float git_status<cr>")
 
+-- Unless you are still migrating, remove the deprecated commands from v1.x
+vim.cmd([[ let g:neo_tree_remove_legacy_commands = 1 ]])
+
 return {
   "nvim-neo-tree/neo-tree.nvim",
   version = "*",
