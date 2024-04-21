@@ -5,4 +5,127 @@
 
 ---@module 'lazy'
 ---@type LazySpec
-return {}
+return { -- Start screen (https://github.com/echasnovski/mini.nvim/blob/main/readmes/mini-starter.md)
+  { 'nvim-treesitter/nvim-treesitter-context' },
+
+    { -- Collection of various small independent plugins/modules
+      'nvim-mini/mini.nvim',
+      config = function()
+        -- require('mini.ai').setup { n_lines = 500 }
+        require('mini.starter').setup()
+        require('mini.sessions').setup()
+        -- Better brackets mappings
+        require('mini.bracketed').setup()
+        -- Auto pair
+        -- require('mini.pairs').setup()
+        -- Scope line
+        -- require('mini.indentscope').setup {
+        --   draw = {
+        --     delay = 30,
+        --     animation = require('mini.indentscope').gen_animation.none(),
+        --   },
+        -- }
+      end
+  },
+  
+  -- Coment line and blocks ('gcc')
+  { 'numToStr/Comment.nvim', opts = {} },
+  -- Java LSP
+  {
+    'mfussenegger/nvim-jdtls',
+    ft = { 'java' },
+    config = function()
+      -- local home = vim.env.HOME
+      
+      -- local java_path = vim.fn.system 'mise which java --tool=java@temurin-21'
+      -- remove <NL> from string
+      -- java_path = string.gsub(java_path, '\n', '')
+      -- local java_root = vim.fs.normalize(vim.fs.dirname(java_path) .. '/..')
+
+      local java_path = nil
+      if vim.uv.os_uname().sysname == 'Windows_NT' then
+        -- https://neo.vimhelp.org/lua.txt.html#lua-vim-system
+        local ps = vim.system({'powershell', '-c', '(Get-Command java).Source'}, { text = true }):wait()
+        java_path = ps.stdout
+      else
+        local ps = vim.system({'bash', '-c', 'which java'}, { text = true }):wait()
+        java_path = ps.stdout
+      end
+      if #java_path == 0 then
+        print("Error! Not able to find 'java' in PATH")
+        return
+      end
+
+      -- Based on: https://github.com/exosyphon/nvim/blob/0aa48126c7f35f2009c5a695860a53c8a450485f/ftplugin/java.lua#
+      local workspace_path = vim.fs.joinpath(vim.fn.stdpath 'data', 'jdtls-workspace')
+      local project_name = vim.fn.fnamemodify(vim.fn.getcwd(), ':p:h:t')
+      local workspace_dir = vim.fs.joinpath(workspace_path, project_name)
+
+      -- local status, jdtls = pcall(require, 'jdtls')
+      -- if not status then
+      --   return
+      -- end
+      -- local extendedClientCapabilities = jdtls.extendedClientCapabilities
+
+      local config = {
+        -- cmd = { home .. '/.local/share/jdtls/bin/jdtls' },
+        -- cmd = { 'jdtls' },
+        cmd = {
+          java_path,
+          '-Declipse.application=org.eclipse.jdt.ls.core.id1',
+          '-Dosgi.bundles.defaultStartLevel=4',
+          '-Declipse.product=org.eclipse.jdt.ls.core.product',
+          '-Dlog.protocol=true',
+          '-Dlog.level=ALL',
+          '-Xmx1g',
+          '--add-modules=ALL-SYSTEM',
+          '--add-opens',
+          'java.base/java.util=ALL-UNNAMED',
+          '--add-opens',
+          'java.base/java.lang=ALL-UNNAMED',
+          '-javaagent:' .. vim.fs.joinpath(vim.fn.stdpath 'data', '/mason/packages/jdtls/lombok.jar'),
+          '-jar',
+          vim.fs.joinpath(vim.fn.stdpath 'data', vim.fn.glob('/mason/packages/jdtls/plugins/org.eclipse.equinox.launcher_*.jar')),
+          '-configuration',
+          vim.fs.joinpath(vim.fn.stdpath 'data', '/mason/packages/jdtls/config_linux'),
+          '-data',
+          workspace_dir,
+        },
+        root_dir = vim.fs.dirname(vim.fs.find({ 'gradlew', '.git', 'mvnw' }, { upward = true })[1]),
+        settings = {
+          java = {
+            configuration = {
+              runtimes = {
+                {
+                  name = 'JavaSE-21',
+                  -- path = '/usr/lib/jvm/java-21-openjdk-amd64/',
+                  path = java_root,
+                },
+              },
+            },
+            signatureHelp = { enabled = true },
+            -- extendedClientCapabilities = extendedClientCapabilities,
+            maven = {
+              downloadSources = true,
+            },
+            referencesCodeLens = {
+              enabled = true,
+            },
+            references = {
+              includeDecompiledSources = true,
+            },
+            inlayHints = {
+              parameterNames = {
+                enabled = 'all', -- literals, all, none
+              },
+            },
+            format = {
+              enabled = false,
+            },
+          },
+        },
+      }
+      require('jdtls').start_or_attach(config)
+    end,
+  },
+}

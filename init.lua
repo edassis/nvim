@@ -110,6 +110,8 @@ vim.o.mouse = 'a'
 -- Don't show the mode, since it's already in the status line
 vim.o.showmode = false
 
+require 'custom.opts'
+
 -- Sync clipboard between OS and Neovim.
 --  Schedule the setting after `UiEnter` because it can increase startup-time.
 --  Remove this option if you want your OS clipboard to remain independent.
@@ -320,6 +322,8 @@ require('lazy').setup({
         { '<leader>t', group = '[T]oggle' },
         { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } }, -- Enable gitsigns recommended keymaps first
         { 'gr', group = 'LSP Actions', mode = { 'n' } },
+        { '<leader>e', group = '[E]ditor', mode = { 'n' } },
+        { '<leader>w', group = '[W]orkspace', mode = { 'n' } },
       },
     },
   },
@@ -351,7 +355,13 @@ require('lazy').setup({
 
         -- `build` is used to run some command when the plugin is installed/updated.
         -- This is only run then, not every time Neovim starts up.
-        build = 'make',
+        build = (function()
+          local ret = 'make'
+          if vim.uv.os_uname().sysname == 'Windows_NT' then
+            ret = 'cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release && cmake --install build --prefix build'
+          end
+          return ret
+        end)(),
 
         -- `cond` is a condition used to determine whether this plugin should be
         -- installed and loaded.
@@ -392,8 +402,21 @@ require('lazy').setup({
         --   mappings = {
         --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
         --   },
+        --   -- path_display = { 'truncate' },
+        --   -- layout_config = {
+        --   --   preview_width = 0.65,
+        --   -- },
+        -- mappings = {
+        --   i = { ['<c-enter>'] = 'to_fuzzy_refine' },
         -- },
-        -- pickers = {}
+        -- },
+        -- https://github.com/nvim-telescope/telescope.nvim/wiki/Configuration-Recipes#file-and-text-search-in-hidden-files-and-directories
+        pickers = {
+          find_files = {
+            -- `hidden = true` will still show the inside of `.git/` as it's not `.gitignore`d.
+            find_command = { 'rg', '--files', '--hidden', '--glob', '!**/.git/*' },
+          },
+        },
         extensions = {
           ['ui-select'] = { require('telescope.themes').get_dropdown() },
         },
@@ -641,6 +664,17 @@ require('lazy').setup({
             Lua = {},
           },
         },
+
+        -- csharp_ls = {},
+        clangd = {},
+        gopls = {},
+        -- rust_analyzer = {},
+        -- NOTE: Needs `node`
+        pyright = {},
+        ts_ls = {},
+        -- NOTE: Java LSP (jdtls) is configured in 'custom.plugins' out-side mason
+        -- NOTE: Should be manually installed via Mason for now, otherwise it will be configured by 'mason-lspconfig'.
+        -- jdtls = {},
       }
 
       -- Ensure the servers and tools above are installed
@@ -653,6 +687,8 @@ require('lazy').setup({
       local ensure_installed = vim.tbl_keys(servers or {})
       vim.list_extend(ensure_installed, {
         -- You can add other tools here that you want Mason to install
+        'xmlformatter',
+        'google-java-format',
       })
 
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
@@ -696,6 +732,8 @@ require('lazy').setup({
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
+        java = { 'google-java-format' },
+        xml = { 'xmlformatter' },
         -- Conform can also run multiple formatters sequentially
         -- python = { "isort", "black" },
         --
@@ -725,12 +763,13 @@ require('lazy').setup({
           -- `friendly-snippets` contains a variety of premade snippets.
           --    See the README about individual language/framework/plugin snippets:
           --    https://github.com/rafamadriz/friendly-snippets
-          -- {
-          --   'rafamadriz/friendly-snippets',
-          --   config = function()
-          --     require('luasnip.loaders.from_vscode').lazy_load()
-          --   end,
-          -- },
+          {
+            'rafamadriz/friendly-snippets',
+            config = function()
+              require('luasnip.loaders.from_vscode').lazy_load()
+              require('luasnip.loaders.from_vscode').lazy_load { paths = './snippets' }
+            end,
+          },
         },
         opts = {},
       },
@@ -816,7 +855,7 @@ require('lazy').setup({
       -- Load the colorscheme here.
       -- Like many other themes, this one has different styles, and you could load
       -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      vim.cmd.colorscheme 'tokyonight-night'
+      -- vim.cmd.colorscheme 'tokyonight-night'
     end,
   },
 
@@ -876,6 +915,17 @@ require('lazy').setup({
     config = function()
       -- ensure basic parser are installed
       local parsers = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
+      vim.list_extend(parsers, {
+        'cpp',
+        'go',
+        'python',
+        'rust',
+        'tsx',
+        'javascript',
+        'typescript',
+        'c_sharp',
+        'java',
+      }) 
       require('nvim-treesitter').install(parsers)
 
       ---@param buf integer
@@ -929,9 +979,9 @@ require('lazy').setup({
   --  Here are some example plugins that I've included in the Kickstart repository.
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
-  -- require 'kickstart.plugins.debug',
-  -- require 'kickstart.plugins.indent_line',
-  -- require 'kickstart.plugins.lint',
+  require 'kickstart.plugins.debug',
+  require 'kickstart.plugins.indent_line',
+  require 'kickstart.plugins.lint',
   -- require 'kickstart.plugins.autopairs',
   -- require 'kickstart.plugins.neo-tree',
   -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommended keymaps
@@ -940,7 +990,7 @@ require('lazy').setup({
   --    This is the easiest way to modularize your config.
   --
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
-  -- { import = 'custom.plugins' },
+  { import = 'custom.plugins' },
   --
   -- For additional information with loading, sourcing and examples see `:help lazy.nvim-🔌-plugin-spec`
   -- Or use telescope!
@@ -970,3 +1020,8 @@ require('lazy').setup({
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
+
+-- Custom keymaps here in case it calls some plugin.
+require 'custom.keymaps'
+
+-- TODO: After format, run 'GuessIndentation' again
