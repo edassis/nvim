@@ -18,3 +18,8 @@ require('treesitter-context').setup {}
 -- Coment line and blocks ('gcc')
 vim.pack.add { 'https://github.com/numToStr/Comment.nvim' }
 require('Comment').setup {}
+
+-- Theme Kanagawa (wave, dragon, lotus)
+vim.pack.add { 'https://github.com/rebelot/kanagawa.nvim' }
+-- require("kanagawa").setup{ ... }  # Use to change defaults.
+vim.cmd.colorscheme 'kanagawa-wave'
